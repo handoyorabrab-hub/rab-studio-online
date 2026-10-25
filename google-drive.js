@@ -27,6 +27,19 @@
   const gate = document.createElement('section'); gate.id = 'googleGate';
   gate.innerHTML = `<div class="google-box"><div class="google-logo">RAB STUDIO · GOOGLE DRIVE</div><h1>Hubungkan Google</h1><p class="google-intro">Masuk dengan akun Google Anda. Data proyek disimpan sebagai berkas pribadi di Drive akun tersebut.</p><div class="google-actions"><button id="googleConnect" type="button">Hubungkan akun Google</button></div><div id="googleMessage" class="google-message"></div><div class="google-foot" id="googleFoot">Aplikasi hanya meminta akses ke berkas yang dibuat atau dibukakan melalui aplikasi ini. Anda dapat mencabut akses dari Akun Google.</div><button id="googleLocal" class="google-local" type="button" hidden>Buka mode lokal di browser ini</button></div>`;
   document.body.appendChild(gate);
+
+  let detachedBadgeForPrint = null;
+  window.addEventListener('beforeprint', () => {
+    const badge = document.getElementById('googleSyncBadge');
+    if (badge) {
+      detachedBadgeForPrint = badge;
+      badge.remove();
+    }
+  });
+  window.addEventListener('afterprint', () => {
+    if (detachedBadgeForPrint && !detachedBadgeForPrint.isConnected) document.body.appendChild(detachedBadgeForPrint);
+    detachedBadgeForPrint = null;
+  });
   const message = (text, error = false) => { const el = document.getElementById('googleMessage'); el.textContent = text; el.classList.toggle('error', error); };
   const parseLocal = (key, fallback) => { try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch { return fallback; } };
   const localData = () => ({ version: 1, projects: parseLocal('rabProjectHistory', []), catalog: parseLocal('rabCatalog', []), companyProfile: parseLocal('rabCompanyProfile', {}), updatedAt: new Date().toISOString() });
@@ -117,9 +130,13 @@
       const account = await api('https://www.googleapis.com/oauth2/v3/userinfo'); email = account.email || '';
       const file = await findDataFile();
       if (file) { const remote = await readFile(file.id); applyDataToApp(remote); }
-      else { const initial = localData(); await saveCloudData(initial, true); applyDataToApp(initial); }
+      else {
+        token = '';
+        message('Berkas "' + fileName + '" tidak ditemukan di Drive akun ' + (email || 'yang dipilih') + '. Tidak ada data lokal yang akan dijadikan pengganti. Pastikan akun Google yang dipilih benar dan berkas data masih ada di Drive.', true);
+        return;
+      }
       document.body.classList.remove('google-locked'); gate.hidden = true;
-      const badge = document.createElement('button'); badge.id = 'googleSyncBadge'; badge.type = 'button'; badge.textContent = '● DRIVE · ' + (email || 'TERSAMBUNG'); badge.title = 'Klik untuk melepas koneksi Google'; badge.style.cursor = 'pointer';
+      const badge = document.createElement('button'); badge.id = 'googleSyncBadge'; badge.type = 'button'; badge.textContent = '● DRIVE · ' + (email || 'TERSAMBUNG'); badge.title = 'Akun Drive: ' + (email || 'tersambung') + '\nBerkas: My Drive / ' + fileName + '\nID berkas: ' + driveFileId + '\nKlik untuk melepas koneksi Google'; badge.style.cursor = 'pointer';
       badge.addEventListener('click', () => { if (confirm('Lepas koneksi Google pada browser ini?')) { token = ''; document.body.classList.add('google-locked'); gate.hidden = false; message('Koneksi dilepas. Data tetap tersimpan di Drive.'); badge.remove(); } });
       document.body.appendChild(badge); lastSnapshot = snapshot(); message('');
     } catch (error) { token = ''; message(error.message || 'Koneksi ke Drive gagal.', true); }
