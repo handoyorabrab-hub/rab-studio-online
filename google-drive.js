@@ -110,6 +110,13 @@
     if (!driveFileId || create) await uploadNewFile(payload); else await updateFile(payload);
   }
 
+  function hasUserData(dataDoc) {
+    const projects = Array.isArray(dataDoc?.projects) ? dataDoc.projects : [];
+    const items = Array.isArray(dataDoc?.catalog) ? dataDoc.catalog : [];
+    const profile = dataDoc?.companyProfile && typeof dataDoc.companyProfile === 'object' ? dataDoc.companyProfile : {};
+    return projects.length > 0 || items.length > 0 || Boolean(profile.companyAddress || profile.logoData || (profile.companyName && profile.companyName !== 'Perusahaan Anda') || (profile.ownerName && profile.ownerName !== 'Nama Anda'));
+  }
+
   function applyDataToApp(dataDoc) {
     localStorage.setItem('rabProjectHistory', JSON.stringify(Array.isArray(dataDoc.projects) ? dataDoc.projects : []));
     localStorage.setItem('rabCatalog', JSON.stringify(Array.isArray(dataDoc.catalog) ? dataDoc.catalog : []));
@@ -129,7 +136,15 @@
     try {
       const account = await api('https://www.googleapis.com/oauth2/v3/userinfo'); email = account.email || '';
       const file = await findDataFile();
-      if (file) { const remote = await readFile(file.id); applyDataToApp(remote); }
+      if (file) {
+        const remote = await readFile(file.id);
+        if (!hasUserData(remote) && hasUserData(localData())) {
+          token = '';
+          message('Berkas Drive "' + fileName + '" ditemukan tetapi kosong, sementara browser ini masih memiliki data lokal. Data lokal dipertahankan dan tidak dikirim atau ditimpa. Periksa berkas/akun Drive sebelum melanjutkan.', true);
+          return;
+        }
+        applyDataToApp(remote);
+      }
       else {
         token = '';
         message('Berkas "' + fileName + '" tidak ditemukan di Drive akun ' + (email || 'yang dipilih') + '. Tidak ada data lokal yang akan dijadikan pengganti. Pastikan akun Google yang dipilih benar dan berkas data masih ada di Drive.', true);
