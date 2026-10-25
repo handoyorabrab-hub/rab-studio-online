@@ -20,6 +20,7 @@
     .google-actions{display:flex;gap:8px;margin-top:17px}.google-actions button{border:1px solid #087e80;border-radius:7px;padding:11px 14px;background:#087e80;color:white;cursor:pointer;font-weight:700}.google-actions button:disabled{opacity:.6;cursor:wait}
     .google-message{min-height:20px;margin-top:12px;color:#53676b;font-size:11px}.google-message.error{color:#a43d36}.google-foot{font-size:10px;color:#879694;margin-top:14px}.google-local{margin-top:14px;border:1px solid #cfdddc;border-radius:7px;padding:9px 12px;background:white;color:#18343a;cursor:pointer;font-size:11px}
     #googleSyncBadge{position:fixed;right:14px;bottom:12px;z-index:9998;background:#132630;color:#d7eceb;border:1px solid #31525a;border-radius:7px;padding:7px 10px;font:10px Consolas,monospace;box-shadow:0 4px 14px #0002}
+    @media print{#googleSyncBadge{display:none!important;visibility:hidden!important}}
   `;
   document.head.appendChild(style);
   document.body.classList.add('google-locked');
@@ -149,5 +150,6 @@
   window.addEventListener('storage', () => setTimeout(syncNow, 150));
   window.addEventListener('beforeunload', () => { if (token) syncNow(); });
 })();
+
 
 
